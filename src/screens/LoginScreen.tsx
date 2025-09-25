@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -6,7 +7,7 @@ import {
   Image,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -17,6 +18,15 @@ import { theme } from '../constants/theme';
 import { useAuthStore } from '../state/authStore';
 
 const logoUrl = 'https://www.24karat.co.in/images/logo.png';
+
+// Eye icon component for password visibility toggle using Expo Vector Icons
+const EyeIcon = ({ isVisible }: { isVisible: boolean }) => (
+  <Ionicons
+    name={isVisible ? 'eye' : 'eye-off'}
+    size={20}
+    color={theme.colors.subtleText}
+  />
+);
 // Validation schema
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -28,6 +38,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginScreen({ navigation }: any) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuthStore();
 
   const {
@@ -112,7 +123,9 @@ export default function LoginScreen({ navigation }: any) {
               onBlur={onBlur}
               error={errors.password?.message}
               required
-              secureTextEntry
+              secureTextEntry={!showPassword}
+              rightIcon={<EyeIcon isVisible={showPassword} />}
+              onRightIconPress={() => setShowPassword(!showPassword)}
             />
           )}
         />

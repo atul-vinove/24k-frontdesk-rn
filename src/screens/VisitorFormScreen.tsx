@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   Alert,
@@ -11,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import SignaturePanel from 'react-native-signature-panel';
+import SignatureCanvas from 'react-native-signature-canvas';
 import { z } from 'zod';
 import { Button, Input, RadioButton } from '../components/ui';
 import { SOURCES } from '../constants/sources';
@@ -43,6 +44,7 @@ export default function VisitorFormScreen({ navigation }: VisitorFormScreenProps
   const [isLoading, setIsLoading] = useState(false);
   const [showSignaturePanel, setShowSignaturePanel] = useState(false);
   const [signatureData, setSignatureData] = useState('');
+  const signatureRef = useRef<any>(null);
   const { user } = useAuthStore();
   const { addVisitor } = useVisitorStore();
 
@@ -92,10 +94,22 @@ export default function VisitorFormScreen({ navigation }: VisitorFormScreenProps
     }
   };
 
-  const handleSignatureDone = (signature: string) => {
+  const handleSignatureOK = (signature: string) => {
+    console.log('Signature captured:', signature);
     setSignatureData(signature);
     setValue('signature', signature);
     setShowSignaturePanel(false);
+  };
+
+  const handleSignatureEmpty = () => {
+    console.log('Signature is empty');
+    Alert.alert('Empty Signature', 'Please provide a signature before saving.');
+  };
+
+  const handleSignatureClear = () => {
+    console.log('Signature cleared');
+    setSignatureData('');
+    setValue('signature', '');
   };
 
   const onSubmit = async (data: VisitorFormData) => {
@@ -171,17 +185,67 @@ export default function VisitorFormScreen({ navigation }: VisitorFormScreenProps
   if (showSignaturePanel) {
     return (
       <View style={styles.signatureContainer}>
-        <Text style={styles.signatureTitle}>Please sign below</Text>
+        <View style={styles.signatureHeader}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => setShowSignaturePanel(false)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.signatureTitle}>Please sign below</Text>
+        </View>
         <View style={styles.signaturePanel}>
-          <SignaturePanel
-            onSave={handleSignatureDone}
-            onCancel={() => setShowSignaturePanel(false)}
-            saveText="Done"
-            cancelText="Cancel"
+          <SignatureCanvas
+            ref={signatureRef}
+            onOK={handleSignatureOK}
+            onEmpty={handleSignatureEmpty}
+            onClear={handleSignatureClear}
+            autoClear={false}
+            descriptionText="Please sign above"
             clearText="Clear"
-            strokeColor={theme.colors.primary}
-            bgColor={theme.colors.background}
-            textColor={theme.colors.text}
+            confirmText="Save"
+            webviewContainerStyle={{
+              backgroundColor: theme.colors.background,
+            }}
+            webStyle={`
+              .m-signature-pad {
+                box-shadow: none;
+                border: 2px solid ${theme.colors.border};
+                border-radius: ${theme.borderRadius.medium}px;
+                width: 100%;
+                height: 100%;
+              }
+              .m-signature-pad--body {
+                border: none;
+                background-color: ${theme.colors.white};
+              }
+              .m-signature-pad--footer {
+                color: ${theme.colors.text};
+                background: ${theme.colors.background};
+                display: flex;
+                justify-content: space-between;
+                padding: 10px;
+              }
+              .button {
+                background-color: ${theme.colors.primary};
+                color: white;
+                border-radius: ${theme.borderRadius.small}px;
+                padding: 12px 24px;
+                margin: 5px;
+                border: none;
+                font-size: 16px;
+                font-weight: bold;
+                min-width: 80px;
+              }
+              .button.clear {
+                background-color: ${theme.colors.error};
+              }
+              .button.save {
+                background-color: ${theme.colors.primary};
+              }
+            `}
+            style={styles.signatureCanvas}
           />
         </View>
       </View>
@@ -321,7 +385,13 @@ export default function VisitorFormScreen({ navigation }: VisitorFormScreenProps
             onPress={() => setShowSignaturePanel(true)}
           >
             {signatureData ? (
-              <Image source={{ uri: signatureData }} style={styles.signaturePreview} />
+              <View style={styles.signaturePreviewContainer}>
+                <Image 
+                  source={{ uri: signatureData }} 
+                  style={styles.signaturePreview}
+                  resizeMode="contain"
+                />
+              </View>
             ) : (
               <Text style={styles.signaturePlaceholder}>Tap to sign</Text>
             )}
@@ -477,14 +547,38 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     padding: theme.spacing.l,
   },
+  signatureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.l,
+  },
+  backButton: {
+    padding: theme.spacing.s,
+    marginRight: theme.spacing.m,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   signatureTitle: {
     ...theme.typography.h3,
     color: theme.colors.text,
+    flex: 1,
     textAlign: 'center',
-    marginBottom: theme.spacing.l,
   },
   signaturePanel: {
     flex: 1,
+  },
+  signatureCanvas: {
+    flex: 1,
+    width: '100%',
+  },
+  signaturePreviewContainer: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.s,
+    width: '100%',
+    minHeight: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
